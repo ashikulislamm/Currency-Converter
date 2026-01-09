@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Head from "next/head";
 import { useCurrency } from "../../context/CurrencyContext";
@@ -21,7 +21,7 @@ const currencyNames: Record<CurrencyCode, string> = {
   CNY: 'Chinese Yuan',
 };
 
-export default function CurrencyDetailPage() {
+function CurrencyDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const code = searchParams.get("code") || "USD";
@@ -156,5 +156,23 @@ export default function CurrencyDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CurrencyDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+        <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-48 animate-pulse"></div>
+        <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded w-64 animate-pulse"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl h-96 animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <CurrencyDetailContent />
+    </Suspense>
   );
 }
