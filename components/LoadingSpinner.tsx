@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { RefreshCcw } from 'lucide-react';
+import React from "react";
+import { RefreshCcw } from "lucide-react";
 
 export const LoadingSpinner = () => (
   <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 z-10 flex items-center justify-center backdrop-blur-sm">

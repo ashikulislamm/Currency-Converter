@@ -50,7 +50,7 @@ export const HistoricalChart: React.FC<Props> = ({ data, color = "#2563eb" }) =>
               borderRadius: '8px',
               color: '#fff'
             }}
-            formatter={(value: number) => [value.toFixed(4), 'Rate']}
+            formatter={(value: number | undefined) => value !== undefined ? [value.toFixed(4), 'Rate'] : ['0.0000', 'Rate']}
           />
           <Area 
             type="monotone" 

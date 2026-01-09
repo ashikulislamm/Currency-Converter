@@ -145,7 +145,7 @@ export default function RootLayout({
             <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
 
             <footer className="bg-white dark:bg-slate-900 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-sm">
-              © 2024 GlobalXchange. Powered by Open Exchange Rates & Binance.
+              © 2026 GlobalXchange. Powered by Open Exchange Rates & Binance.
             </footer>
           </div>
         </Providers>

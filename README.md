@@ -67,17 +67,6 @@ pnpm dev
 bun dev
 ```
 
-4. **Open your browser**
-
-Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
-
-### Building for Production
-
-```bash
-npm run build
-npm run start
-```
-
 ## 🏗️ Project Structure
 
 ```
