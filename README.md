@@ -153,13 +153,192 @@ Custom hook that prevents hydration mismatches by loading localStorage values af
 ### Responsive Design
 Mobile-first design with breakpoints for tablet and desktop, including a collapsible mobile menu.
 
-## 🤝 Contributing
+## 🔌 APIs Used
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Open Exchange Rates API
+**Endpoint**: `https://open.er-api.com/v6/latest/USD`
 
-## 📄 License
+**Reasoning**:
+- Free tier with no authentication required
+- Provides comprehensive exchange rates for 160+ currencies
+- Reliable uptime and consistent data format
+- Returns rates relative to USD as base currency
+- No CORS restrictions for client-side requests
 
-This project is open source and available under the MIT License.
+**Update Frequency**: Every 60 seconds via polling
+
+### Binance WebSocket API
+**Endpoint**: `wss://stream.binance.com:9443/stream?streams={symbols}`
+
+**Reasoning**:
+- Real-time cryptocurrency price streaming
+- No authentication needed for public market data
+- Minimal latency for price updates
+- Supports multiple simultaneous streams
+- Industry-standard for crypto market data
+
+**Update Frequency**: Real-time push updates on every trade
+
+## 🔄 Real-time Update Strategy
+
+### Fiat Currency Rates
+- **Method**: HTTP Polling
+- **Interval**: 60 seconds
+- **Implementation**: `setInterval` in `CurrencyContext`
+- **Error Handling**: Silent failures with console logging
+- **State Updates**: Replaces entire rates object on successful fetch
+
+```typescript
+useEffect(() => {
+  fetchRates();
+  const interval = setInterval(fetchRates, 60000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+### Cryptocurrency Prices
+- **Method**: WebSocket Streaming
+- **Connection**: Persistent connection with automatic reconnection
+- **Implementation**: Native WebSocket API in `CurrencyContext`
+- **Message Format**: Binance trade stream format
+- **State Updates**: Individual price updates merged into state
+
+```typescript
+const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+ws.onmessage = (event) => {
+  setCryptoRates(prev => ({ ...prev, [symbol]: price }));
+};
+```
+
+## 🏛️ State Management Architecture
+
+### Global State (CurrencyContext)
+**Technology**: React Context API with hooks
+
+**State Variables**:
+- `rates: Rates` - Fiat exchange rates object
+- `cryptoRates: CryptoRates` - Cryptocurrency prices
+- `loading: boolean` - Initial data load status
+- `lastUpdated: Date | null` - Last rate update timestamp
+- `baseCurrency: CurrencyCode` - User's base currency (persisted)
+- `targetCurrency: CurrencyCode` - User's target currency (persisted)
+
+**Functions**:
+- `convertFiat()` - Memoized conversion function using `useCallback`
+- `setBaseCurrency()` - Updates base currency with localStorage persistence
+- `setTargetCurrency()` - Updates target currency with localStorage persistence
+
+**Reasoning**:
+- Context API sufficient for this scale (no complex state relationships)
+- Avoids prop drilling through multiple component levels
+- `useCallback` prevents infinite re-renders
+- localStorage integration for user preference persistence
+
+### Local State
+Each component manages its own UI-specific state:
+- Form inputs (amount, selected currencies)
+- UI toggles (menu open/closed state)
+- Temporary calculations and derived values
+
+## 📁 Folder Structure Explained
+
+```
+Currency Converter/
+│
+├── app/                        # Next.js App Router
+│   ├── currency/
+│   │   └── page.tsx           # Dynamic currency detail page
+│   ├── globals.css            # Global styles, animations, Tailwind
+│   ├── layout.tsx             # Root layout (server component)
+│   └── page.tsx               # Home page (client component)
+│
+├── components/                 # Reusable React components
+│   ├── CryptoDashboard.tsx    # Crypto section (ticker + converter)
+│   ├── CurrencyConverter.tsx  # Main fiat converter component
+│   ├── CurrencySelector.tsx   # Dropdown for currency selection
+│   ├── HistoricalChart.tsx    # Chart visualization component
+│   ├── LoadingSpinner.tsx     # Reusable loading indicator
+│   ├── Navigation.tsx         # Header nav (client component)
+│   └── Providers.tsx          # Context providers wrapper
+│
+├── context/                    # Global state management
+│   └── CurrencyContext.tsx    # Currency state, API calls, WebSocket
+│
+├── hooks/                      # Custom React hooks
+│   └── useLocalStorage.ts     # SSR-safe localStorage hook
+│
+├── lib/                        # Utility functions
+│   └── utils.ts               # Formatting, mock data generation
+│
+├── types/                      # TypeScript definitions
+│   └── index.ts               # Shared type definitions
+│
+└── public/                     # Static assets (images, fonts)
+```
+
+**Design Principles**:
+- **Separation of Concerns**: UI components separate from business logic
+- **Colocation**: Related files grouped together
+- **Client/Server Separation**: Server components in app/, client components marked explicitly
+- **Reusability**: Shared utilities and types in dedicated folders
+- **Next.js Conventions**: Follows App Router file structure
+
+## ⚠️ Known Limitations
+
+### API Limitations
+1. **Free Tier Restrictions**
+   - Open Exchange Rates: Limited to 1,000 requests/month (hourly polling only)
+   - No historical data API (using mock generated data)
+   - Base currency locked to USD (requires conversion math)
+
+2. **No Authentication**
+   - Public APIs only - no API keys required
+   - Limited to public endpoints
+   - No rate limiting protection
+
+### Functional Limitations
+1. **Historical Data**
+   - Historical charts use **mock generated data**
+   - Not real historical prices
+   - Generated algorithmically based on current rates
+
+2. **Currency Support**
+   - Limited to 8 predefined fiat currencies
+   - Limited to 4 major cryptocurrencies
+   - No dynamic currency addition
+
+3. **Offline Functionality**
+   - No offline support
+   - Requires active internet connection
+   - No service worker caching
+
+### Technical Limitations
+1. **Browser Compatibility**
+   - Requires modern browser with WebSocket support
+   - localStorage required for preferences
+   - No IE11 support
+
+2. **Performance**
+   - WebSocket connection uses browser resources
+   - No request debouncing on rapid user input
+   - Mock data generation on every page load
+
+3. **Error Handling**
+   - Silent API failures (logged to console only)
+   - No retry logic for failed requests
+   - No user notifications for connection issues
+
+### Future Improvements
+- [ ] Add real historical data API integration
+- [ ] Implement offline mode with service workers
+- [ ] Add more currency options
+- [ ] Include error notifications/toasts
+- [ ] Add request retry logic
+- [ ] Implement rate limiting protection
+- [ ] Add unit and integration tests
+- [ ] Support for cryptocurrency conversions between crypto pairs
+- [ ] Add favorite currencies feature
+- [ ] Implement currency comparison charts
 
 ## 🙏 Acknowledgments
 
@@ -167,10 +346,3 @@ This project is open source and available under the MIT License.
 - Cryptocurrency prices from [Binance](https://www.binance.com/)
 - Icons by [Lucide](https://lucide.dev/)
 
-## 📧 Contact
-
-For questions or feedback, please open an issue on GitHub.
-
----
-
-**Built with ❤️ using Next.js and React**
