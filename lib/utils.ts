@@ -11,48 +11,93 @@ export const safeFormat = (val: number) => {
   return Math.abs(val) < 0.000001 ? "0" : parseFloat(val.toFixed(6)).toString();
 };
 
-export const generateMockHistory = (baseVal: number, days: number = 30) => {
-  const data = [];
-  let current = baseVal;
-  const now = new Date();
+// Fetch real historical data from exchangerate.host API
+export const fetchHistoricalData = async (
+  baseCurrency: string,
+  targetCurrency: string,
+  days: number
+) => {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
 
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
-    // Create more realistic random walk with smaller variance for shorter periods
-    const volatility = days === 7 ? 0.01 : days === 30 ? 0.015 : 0.02;
-    const change = (Math.random() - 0.5) * (baseVal * volatility);
-    current += change;
+    const start = formatDate(startDate);
+    const end = formatDate(endDate);
 
-    // Format date based on time period
-    let dateLabel;
-    if (days <= 7) {
-      // Show day of week for 7 days
-      dateLabel = date.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
-    } else if (days <= 30) {
-      // Show date for 30 days
-      dateLabel = date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-      });
-    } else {
-      // Show month/day for 90 days
-      dateLabel = date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-      });
+    console.log(
+      `Fetching historical data: ${baseCurrency} to ${targetCurrency}, ${start} to ${end}`
+    );
+
+    // Try frankfurter.app API (more reliable and simpler)
+    try {
+      const response = await fetch(
+        `https://api.frankfurter.app/${start}..${end}?from=${baseCurrency}&to=${targetCurrency}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Frankfurter API Response:", data);
+
+        if (data.rates && Object.keys(data.rates).length > 0) {
+          const historicalData = Object.entries(data.rates)
+            .map(([dateStr, rates]: [string, any]) => {
+              const date = new Date(dateStr);
+              let dateLabel: string;
+
+              if (days <= 7) {
+                dateLabel = date.toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+              } else if (days <= 30) {
+                dateLabel = date.toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                });
+              } else {
+                dateLabel = date.toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                });
+              }
+
+              return {
+                date: dateLabel,
+                value:
+                  typeof rates === "object" ? rates[targetCurrency] : rates,
+              };
+            })
+            .filter((item) => item.value > 0)
+            .sort((a, b) => {
+              const dateA = Object.keys(data.rates).find((k) =>
+                a.date.includes(new Date(k).getDate().toString())
+              );
+              const dateB = Object.keys(data.rates).find((k) =>
+                b.date.includes(new Date(k).getDate().toString())
+              );
+              return (
+                new Date(dateA || 0).getTime() - new Date(dateB || 0).getTime()
+              );
+            });
+
+          console.log("Processed historical data:", historicalData);
+          return historicalData;
+        }
+      }
+    } catch (apiError) {
+      console.error("Frankfurter API error:", apiError);
     }
 
-    data.push({
-      date: dateLabel,
-      value: Math.abs(current),
-    });
+    // If API fails, return empty array
+    console.log("API failed, returning empty data");
+    return [];
+  } catch (error) {
+    console.error("Error fetching historical data:", error);
+    // Return empty array if everything fails
+    return [];
   }
-
-  return data;
 };

@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Head from "next/head";
 import { useCurrency } from "../../context/CurrencyContext";
 import { HistoricalChart } from "../../components/HistoricalChart";
-import { generateMockHistory, formatCurrency } from "../../lib/utils";
+import { fetchHistoricalData, formatCurrency } from "../../lib/utils";
 import { HistoricalPoint, CurrencyCode } from "../../types/index";
 import { TrendingUp, Coins, ArrowLeft, Calendar } from "lucide-react";
 
@@ -30,6 +30,7 @@ function CurrencyDetailContent() {
   const { convertFiat, supportedCurrencies } = useCurrency();
   const [history, setHistory] = useState<HistoricalPoint[]>([]);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(30);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Update document title dynamically
@@ -46,11 +47,20 @@ function CurrencyDetailContent() {
   }, [currencyCode, currencyName]);
 
   useEffect(() => {
-    // Generate fresh mock history when currency or time period changes
-    const baseVal = convertFiat(1, "USD", currencyCode);
-    if (baseVal > 0) {
-      setHistory(generateMockHistory(baseVal, timePeriod));
-    }
+    // Fetch real historical data when currency or time period changes
+    const loadHistoricalData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchHistoricalData('USD', currencyCode, timePeriod);
+        setHistory(data);
+      } catch (error) {
+        console.error('Failed to load historical data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHistoricalData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyCode, timePeriod]);
 
@@ -100,11 +110,17 @@ function CurrencyDetailContent() {
               </div>
             </div>
             <div className="p-2 md:p-4 bg-slate-50 dark:bg-slate-900 rounded-xl -mx-2 md:mx-0">
-              <HistoricalChart data={history} color="#2563eb" />
+              {isLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <HistoricalChart data={history} color="#2563eb" />
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-2 flex items-center">
               <Calendar className="h-3 w-3 mr-1" />
-              Showing last {timePeriod} days of exchange rate data
+              {isLoading ? 'Loading historical data...' : `Showing real data for last ${timePeriod} days`}
             </p>
           </div>
 
