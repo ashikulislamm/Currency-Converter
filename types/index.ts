@@ -14,3 +14,9 @@ export interface HistoricalPoint {
   date: string;
   value: number;
 }
+
+export interface CryptoHistoricalPoint {
+  date: string;
+  value: number;
+  timestamp?: number;
+}

@@ -165,3 +165,83 @@ export const fetchHistoricalData = async (
     return [];
   }
 };
+
+// Fetch crypto historical data from Binance API
+export const fetchCryptoHistoricalData = async (
+  cryptoSymbol: string,
+  timePeriod: string
+) => {
+  try {
+    // Map time periods to Binance intervals and limits
+    const periodMap: Record<
+      string,
+      { interval: string; limit: number; days: number }
+    > = {
+      "1D": { interval: "1h", limit: 24, days: 1 },
+      "1W": { interval: "4h", limit: 42, days: 7 },
+      "1M": { interval: "1d", limit: 30, days: 30 },
+      "3M": { interval: "1d", limit: 90, days: 90 },
+      "6M": { interval: "1d", limit: 180, days: 180 },
+      "1Y": { interval: "1w", limit: 52, days: 365 },
+      Max: { interval: "1w", limit: 200, days: 1400 },
+    };
+
+    const config = periodMap[timePeriod] || periodMap["1M"];
+    const symbol = `${cryptoSymbol}USDT`;
+
+    console.log(
+      `Fetching crypto historical data for ${symbol}, period: ${timePeriod}`
+    );
+
+    const response = await fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${config.interval}&limit=${config.limit}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Binance API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Binance Historical Data Response:", data);
+
+    if (Array.isArray(data) && data.length > 0) {
+      const historicalData = data.map((kline: any[]) => {
+        const timestamp = kline[0];
+        const closePrice = parseFloat(kline[4]);
+        const date = new Date(timestamp);
+
+        let dateLabel: string;
+        if (timePeriod === "1D") {
+          dateLabel = date.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } else if (timePeriod === "1W" || timePeriod === "1M") {
+          dateLabel = date.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          });
+        } else {
+          dateLabel = date.toLocaleDateString(undefined, {
+            month: "short",
+            year: "2-digit",
+          });
+        }
+
+        return {
+          date: dateLabel,
+          value: closePrice,
+          timestamp,
+        };
+      });
+
+      console.log("Processed crypto historical data:", historicalData);
+      return historicalData;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching crypto historical data:", error);
+    return [];
+  }
+};
